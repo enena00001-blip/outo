@@ -1,8 +1,15 @@
 // Node.js 내장 SQLite 모듈 사용 (Node 22.5+ 필요, 별도 네이티브 빌드 불필요)
 const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
+const fs = require('fs');
 
-const db = new DatabaseSync(path.join(__dirname, 'db', 'scheduler.db'));
+const dbDir = path.join(__dirname, 'db');
+// 배포 환경에 빈 폴더가 누락되는 경우가 있어(git은 빈 폴더를 추적하지 않음) 없으면 직접 생성
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const db = new DatabaseSync(path.join(dbDir, 'scheduler.db'));
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS settings (
@@ -13,15 +20,15 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   text TEXT NOT NULL,
-  link TEXT,               -- 쿠팡파트너스 링크 등 첨부 링크 (댓글로 자동 등록됨)
-  image_url TEXT,          -- 이미지 URL (선택)
-  scheduled_at TEXT NOT NULL,   -- ISO 문자열, 발행 예정 시각
-  status TEXT NOT NULL DEFAULT 'pending', -- pending | posted | failed
-  threads_media_id TEXT,   -- 발행 성공 후 스레드 미디어 ID
+  link TEXT,
+  image_url TEXT,
+  scheduled_at TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  threads_media_id TEXT,
   posted_at TEXT,
   error_message TEXT,
-  auto_comment_enabled INTEGER DEFAULT 1, -- 1: 본문 발행 후 안내문구+링크를 댓글로 자동 등록
-  comment_status TEXT DEFAULT 'none',     -- none | pending | posted | failed (link 없으면 계속 none)
+  auto_comment_enabled INTEGER DEFAULT 1,
+  comment_status TEXT DEFAULT 'none',
   comment_media_id TEXT,
   comment_posted_at TEXT,
   comment_error_message TEXT,
@@ -40,7 +47,6 @@ CREATE TABLE IF NOT EXISTS insights (
 );
 `);
 
-// 이미 만들어진 DB 파일에도 새 컬럼을 안전하게 추가 (이미 있으면 에러 무시)
 const migrations = [
   `ALTER TABLE posts ADD COLUMN auto_comment_enabled INTEGER DEFAULT 1`,
   `ALTER TABLE posts ADD COLUMN comment_status TEXT DEFAULT 'none'`,
@@ -63,7 +69,6 @@ function setSetting(key, value) {
   ).run(key, value);
 }
 
-// 기본 쿠팡파트너스 안내문구 (공정위 표기 의무 문구 포함) - {link} 자리에 실제 링크가 들어감
 const DEFAULT_DISCLOSURE_TEMPLATE =
   '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.\n\n{link}';
 
