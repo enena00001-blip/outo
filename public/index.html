@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="wrap">
-    <header class="topbar">
+  <div class="app-shell">
+    <header class="app-top">
       <div class="brand">
         <span class="brand-mark">≡</span>
         <div class="brand-text">
@@ -16,14 +16,12 @@
           <span id="connStatus" class="conn-badge conn-loading">연결 확인 중…</span>
         </div>
       </div>
-      <nav class="tabs">
-        <button class="tab-btn active" data-tab="dashboard">대시보드</button>
-        <button class="tab-btn" data-tab="compose">글 예약</button>
-        <button class="tab-btn" data-tab="posts">전체 글 목록</button>
-        <button class="tab-btn" data-tab="settings">연결 설정</button>
-      </nav>
+      <div class="account-strip" id="accountStrip">
+        <!-- 계정 칩들이 JS로 여기 채워짐 -->
+      </div>
     </header>
 
+    <main class="app-content">
     <!-- 대시보드 -->
     <section id="tab-dashboard" class="tab-panel active">
       <div class="stat-grid">
@@ -71,7 +69,12 @@
         <h2>새 글 예약</h2>
         <form id="composeForm">
           <label>본문
-            <textarea name="text" rows="5" placeholder="글 내용을 입력하세요" required></textarea>
+            <div class="textarea-toolbar">
+              <button type="button" id="aiGenerateBtn" class="btn-ai">✨ AI로 글 써주기</button>
+              <span id="aiGenerateStatus" class="ai-status"></span>
+            </div>
+            <textarea name="text" rows="7" placeholder="글 내용을 입력하세요" required></textarea>
+            <div id="aiCandidates" class="ai-candidates hidden"></div>
           </label>
           <label>쿠팡파트너스 링크 (선택)
             <input type="url" name="link" id="linkInput" placeholder="https://link.coupang.com/..." />
@@ -85,12 +88,30 @@
             <span class="comment-preview-label">자동 등록될 댓글 미리보기</span>
             <p id="commentPreviewText"></p>
           </div>
-          <label>이미지 URL <span class="label-note">(링크 입력 시 상품 사진 자동으로 채워짐, 직접 수정 가능)</span>
+          <label>이미지 URL <span class="label-note">(상품 검색/링크 시 자동으로 채워짐)</span>
             <input type="url" name="image_url" id="imageUrlInput" placeholder="https://..." />
           </label>
-          <div id="imagePreviewBox" class="image-preview hidden">
-            <img id="imagePreviewImg" src="" alt="상품 이미지 미리보기" />
+          <label>영상 URL <span class="label-note">(이미지와 동시 사용 불가, 하나만 첨부됨)</span>
+            <input type="url" name="video_url" id="videoUrlInput" placeholder="https://..." />
+          </label>
+
+          <div class="upload-row">
+            <label class="btn-secondary upload-btn">
+              📎 내 사진/영상 직접 첨부
+              <input type="file" id="mediaUploadInput" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime" hidden />
+            </label>
+            <span id="uploadStatus" class="scrape-status hidden"></span>
           </div>
+
+          <div id="imagePreviewBox" class="image-preview hidden">
+            <img id="imagePreviewImg" src="" alt="첨부 이미지 미리보기" />
+            <button type="button" id="removeMediaBtn" class="remove-media-btn">✕ 첨부 삭제</button>
+          </div>
+          <div id="videoPreviewBox" class="image-preview hidden">
+            <video id="videoPreviewEl" controls></video>
+            <button type="button" id="removeVideoBtn" class="remove-media-btn">✕ 첨부 삭제</button>
+          </div>
+
           <label>발행 예정 시각
             <input type="datetime-local" name="scheduled_at" required />
           </label>
@@ -115,6 +136,19 @@
 
     <!-- 연결 설정 -->
     <section id="tab-settings" class="tab-panel">
+      <div class="panel narrow">
+        <h2>계정 관리</h2>
+        <p class="hint">지금 선택된 계정: <strong id="currentAccountLabel">–</strong></p>
+        <form id="renameAccountForm">
+          <label>계정 이름
+            <input type="text" name="label" placeholder="예: 젠틀블루" required />
+          </label>
+          <button type="submit" class="btn-secondary">이름 변경</button>
+        </form>
+        <button type="button" id="deleteAccountBtn" class="btn-danger">이 계정 삭제</button>
+        <p id="accountManageMsg" class="msg"></p>
+      </div>
+
       <div class="panel narrow">
         <h2>스레드 계정 연결</h2>
         <p class="hint">Meta 개발자 앱에서 발급받은 정보를 입력한 뒤 연결하세요.</p>
@@ -152,6 +186,18 @@
       </div>
 
       <div class="panel narrow">
+        <h2>AI 글 생성 (Claude API)</h2>
+        <p class="hint">console.anthropic.com에서 발급받은 API 키를 입력하면 "AI로 글 써주기" 버튼으로 광고 느낌 없는 캐주얼한 본문을 자동으로 써줍니다.</p>
+        <form id="anthropicForm">
+          <label>Anthropic API Key
+            <input type="password" name="ANTHROPIC_API_KEY" placeholder="sk-ant-... (변경 시에만 입력)" />
+          </label>
+          <button type="submit" class="btn-secondary">저장</button>
+        </form>
+        <p id="anthropicMsg" class="msg"></p>
+      </div>
+
+      <div class="panel narrow">
         <h2>쿠팡파트너스 댓글 안내문구</h2>
         <p class="hint">글 예약 시 링크를 입력하면 발행 직후 이 템플릿으로 댓글이 자동 등록됩니다. <code>{link}</code> 자리에 실제 링크가 들어갑니다.</p>
         <form id="disclosureForm">
@@ -163,6 +209,26 @@
         <p id="disclosureMsg" class="msg"></p>
       </div>
     </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="dashboard">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">대시보드</span>
+      </button>
+      <button class="nav-btn" data-tab="compose">
+        <span class="nav-icon">✏️</span>
+        <span class="nav-label">글 예약</span>
+      </button>
+      <button class="nav-btn" data-tab="posts">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">전체 글</span>
+      </button>
+      <button class="nav-btn" data-tab="settings">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">연결 설정</span>
+      </button>
+    </nav>
   </div>
 
   <script src="app.js"></script>
