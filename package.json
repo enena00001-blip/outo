@@ -1,0 +1,22 @@
+{
+  "name": "threads-scheduler",
+  "version": "1.0.0",
+  "description": "스레드(Threads) 예약 발행 + 조회수 대시보드",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "axios": "^1.19.0",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "node-cron": "^4.6.0"
+  }
+}
